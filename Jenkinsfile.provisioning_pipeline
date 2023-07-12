@@ -72,7 +72,7 @@ properties([
 		),
         choice(name: 'Git Org', choices: ['intel-innersource', 'intel-sandbox'],description: 'Choose the Github Organization'),
         string(name: 'Git Repo', defaultValue:'', description: 'Enter Github Repository name'),
-        // string(name: 'GitHub Url', defaultValue:'', description: 'Enter Github Url'),
+        string(name: 'GitHub Url', defaultValue:'', description: 'Enter Github Url'),
         
 
         separator(name: "RASP", sectionHeader: "Fill below parameters to upload Github Repo Zip to Artifactory",
