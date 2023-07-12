@@ -71,6 +71,9 @@ properties([
 			"""
 		),
         choice(name: 'Git Org', choices: ['intel-innersource', 'intel-sandbox'],description: 'Choose the Github Organization'),
+        string(name: 'Git Repo', defaultValue:'', description: 'Enter Github Repository name'),
+        string(name: 'GitHub Url', defaultValue:'', description: 'Enter Github Url'),
+        
 
         separator(name: "RASP", sectionHeader: "Fill below parameters to upload Github Repo Zip to Artifactory",
 			separatorStyle: "border-width: 0",
@@ -290,24 +293,24 @@ properties([
 ])
 
 pipeline {
-    agent { label 'ansible-slave'
+    agent { label 'Git_Node'
     }
 
     environment {
-        ansibleVaultKeyFile=credentials('ansibleVaultKeyFile')
-        GLOBAL_PATH_DEVOPSAPP="/home/jenkins/provisioning/DevopsApp"
-        GLOBAL_PATH_NUCPROVISIONING="/home/jenkins/provisioning/nuc_provisioning"
-        GLOBAL_PATH_SUTPROVISIONING="/home/jenkins/provisioning/sut_provisioning"
-        ANSIBLE_CONFIG="configuration/ansible.cfg"
-        PYCHARM_VERSION="2019.3.5"
-        ansible_tags = combine_tags(params)
-        biforst_ansible_tags = biforst_tags(params)
-        is_bifrost = false
-        sut_ini = " "
-        sut_file_name = "GRoot.yml"
-        OUT = "${SSD_NAME}".replaceAll( ' ', '_' )
+        // ansibleVaultKeyFile=credentials('ansibleVaultKeyFile')
+        // GLOBAL_PATH_DEVOPSAPP="/home/jenkins/provisioning/DevopsApp"
+        // GLOBAL_PATH_NUCPROVISIONING="/home/jenkins/provisioning/nuc_provisioning"
+        // GLOBAL_PATH_SUTPROVISIONING="/home/jenkins/provisioning/sut_provisioning"
+        // ANSIBLE_CONFIG="configuration/ansible.cfg"
+        // PYCHARM_VERSION="2019.3.5"
+        // ansible_tags = combine_tags(params)
+        // biforst_ansible_tags = biforst_tags(params)
+        // is_bifrost = false
+        // sut_ini = " "
+        // sut_file_name = "GRoot.yml"
+        // OUT = "${SSD_NAME}".replaceAll( ' ', '_' )
         GLOBAL_PATH_GIT_REPO="/C:/Users/Administrator/PNP"
-        
+
     }
 
     options {
@@ -319,20 +322,16 @@ pipeline {
              steps {
                  dir("${GLOBAL_PATH_GIT_REPO}"){
                      script {
-                         withCredentials([file(credentialsId: 'ansibleVaultKeyFile', variable: 'ansibleVaultKeyFile')]){
-                             // sh 'sudo rm -rf ${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result'
-                             try {
-                               sh '''\
-                                #!/bin/bash
-                                export ANSIBLE_CONFIG="${GLOBAL_PATH_NUCPROVISIONING}/${ANSIBLE_CONFIG}"
-                                echo "${ANSIBLE_CONFIG}"
-                                ansible --version
-                                ANSIBLE_CONFIG="${ANSIBLE_CONFIG}" ANSIBLE_STDOUT_CALLBACK=junit JUNIT_OUTPUT_DIR="${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result" JUNIT_TASK_CLASS="yes" JUNIT_HIDE_TASK_ARGUMENTS=true ansible-playbook -i .inventory/nuc/${JOB_NAME}/${BUILD_ID}/nuc_provisioning.json upsert_system_configuration.yml -e @credential_vars.yml -e @.inventory/nuc/${JOB_NAME}/${BUILD_ID}/common_vars_all.bifrost.json -e REGION=${REGION} -e ssd_name=${OUT} --vault-password-file "${ansibleVaultKeyFile}" --tags "${ansible_tags}" -vv
-                                pwd
-                                '''
-                             } catch (Exception e) {
-                               throw e
-                             } 
+                            try {
+                            sh '''\
+                            #!/bin/bash
+                            echo 'Cloning Git Repo into the System'
+                            python "c:/Users/Administrator/PnP/Download_and_upload.py" --git_url %Git Url% --org %Git Org% --git_repo %Git Repo% --NUC_Host %NUC Host% --nuc_host_ip %Nuc Host IP% --nuc_user %NUC User% --nuc_password %NUC Password% --SUT_Host %SUT Host% --sut_host_ip %SUT Host IP% --sut_user %SUT User% --sut_password %SUT Password% --atf_url %Artifactory URL%
+                            pwd
+                            '''
+                            } catch (Exception e) {
+                            throw e
+                            } 
                          }
                      }
                  }
