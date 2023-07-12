@@ -1,0 +1,366 @@
+#!groovy
+
+def combine_tags(params){
+    def tags = []
+    
+    if (params.GENERATE_DTAF_CONTENT_CONF_XML){ tags << "CONTENT" }
+
+    if (params.GENERATE_DTAF_SYS_CONF_XML_EGS){ tags << "EGS" }
+
+    if (params.GENERATE_DTAF_SUT_INI_GNR){ tags << "TK" }
+
+    if (params.GENERATE_DTAF_SYS_CONF_XML_GNR){ tags << "GNR" }
+
+    if (params.GENERATE_BIFROST_SYS_CONF_XML_PMSS){ tags << "PMSS" }
+
+    if (params.GENERATE_BIFROST_SYS_CONF_XML_MSS){ tags << "MSS" }
+
+    if (params.GENERATE_BIFROST_SYS_CONF_XML_RAS){ tags << "RAS" }
+
+    if (params.GENERATE_MONTANA_CFG_MANAGEABILITY){ tags << "MANAGEABILITY" }
+    //tags << "NETWORK"
+    if (tags.isEmpty()){
+        tags << 'EGS'
+    }
+    def ansible_tags = tags.join(",")
+    sh "echo ${ansible_tags}"
+    return ansible_tags
+}
+
+def biforst_tags(params){
+    def biforst_ansible_tag = []
+    if (params.BASIC_BRINGUP){ biforst_ansible_tag << "BASIC" }
+
+    if (params.PMSS){ biforst_ansible_tag << "PMSS" }
+
+    if (params.MSS){ biforst_ansible_tag << "MSS" }
+
+    if (params.RAS){ biforst_ansible_tag << "RAS" }
+
+    if (params.ToolKit){ biforst_ansible_tag << "TK" }
+
+    if (params.VIRTUALIZATION){ biforst_ansible_tag << "VIRTUALIZATION" }
+
+    if (params.RDT){ biforst_ansible_tag << "RDT" }
+
+    if (params.SECURITY){ biforst_ansible_tag << "SECURITY" }
+
+    if (params.MANAGEABILITY){ biforst_ansible_tag << "MANAGIBILITY" }
+
+    if(biforst_ansible_tag){
+        return biforst_ansible_tag.join(",")
+    }
+    return false
+}
+
+properties([
+	parameters([
+		separator(name: "RASP", sectionHeader: "Fill below parameters for standalone runs for Github Repo",
+			separatorStyle: "border-width: 0",
+			sectionHeaderStyle: """
+				background-color: #7ea6d3;
+				text-align: center;
+				padding: 4px;
+				color: #343434;
+				font-size: 22px;
+				font-weight: normal;
+				text-transform: uppercase;
+				font-family: 'Orienta', sans-serif;
+				letter-spacing: 1px;
+				font-style: italic;
+			"""
+		),
+        choice(name: 'Git Org', choices: ['intel-innersource', 'intel-sandbox'],description: 'Choose the Github Organization'),
+
+        separator(name: "RASP", sectionHeader: "Fill below parameters to upload Github Repo Zip to Artifactory",
+			separatorStyle: "border-width: 0",
+			sectionHeaderStyle: """
+				background-color: #7ea6d3;
+				text-align: center;
+				padding: 4px;
+				color: #343434;
+				font-size: 22px;
+				font-weight: normal;
+				text-transform: uppercase;
+				font-family: 'Orienta', sans-serif;
+				letter-spacing: 1px;
+				font-style: italic;
+			"""
+		),
+
+        string(name: 'Artifactory_Path', defaultValue: 'https://ubit-artifactory-ba.intel.com/artifactory/dcg-dea-srvplat-repos/Automation_Tools/PAIV_DevOps/SUT_Provisioning/', description: 'Enter the filepath where you want to store your zip file'),
+
+        separator(name: "RASP", sectionHeader: "Fill below parameters to setup Github Repo to Systems",
+			separatorStyle: "border-width: 0",
+			sectionHeaderStyle: """
+				background-color: #7ea6d3;
+				text-align: center;
+				padding: 4px;
+				color: #343434;
+				font-size: 22px;
+				font-weight: normal;
+				text-transform: uppercase;
+				font-family: 'Orienta', sans-serif;
+				letter-spacing: 1px;
+				font-style: italic;
+			"""
+		),
+
+        string(name: 'SYSTEM_IDs', defaultValue: '', description: 'Enter comma separated system IDs'),
+
+        extendedChoice(name: 'SYSTEM', description: 'Choose system where cloning is needed to be done', multiSelectDelimiter: ',',quoteValue: false, saveJSONParameterToFile: false, type: 'PT_CHECKBOX', value: 'NUC,SUT', visibleItemCount: 2),
+
+        // // string(name: 'PROXY', defaultValue: 'http://proxy-dmz.intel.com:912', description: 'Enter the PROXY URL you want to set'),
+
+        // // choice(name: 'NUC_OS_TYPE', choices: ['windows'], description: 'Choose the NUC OS type'),
+        // // choice(name: 'SUT_OS_TYPE', choices: ['linux','windows','esxi'], description: 'Choose the SUT OS type'),
+        // // choice(name: 'REGION', choices: ['ba', 'or', 'sh'], description: 'Choose the NUC region'),
+
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to install pythonsv projects(Need intel innersource and intel restricted access to github)",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // booleanParam(name: 'ENABLE_PYTHONSV', defaultValue: false, description: 'Enable this to install pythonsv projects(common,install,components,misc,emmitsburg default installations)'),
+        // [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', filterLength: 1, filterable: false, name: 'pythonsv', script: [$class: 'GroovyScript', script: [classpath: [], oldScript: '', sandbox: false, script: 'return["crowvalley","graniterapids","emeraldrapids","sapphirerapids","bigcore","sierraforest"]']]],
+        
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to generate system configuration file(s)",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // booleanParam(name: 'ENABLE_UPSERT_SYSTEM_CONFIGURATION', defaultValue: true, description: 'Enable this to run upsert_system_configuration stage'),
+        // // choice(choices: ['PMSS', 'MSS', 'EGS', 'GNR'], name: 'ansible_tags', description: 'Which system you need to pre-bake for?'),
+        // booleanParam(name: 'GENERATE_DTAF_CONTENT_CONF_XML', defaultValue: false, description: 'Enable this to generate DTAF content_configuration.xml'),
+        // booleanParam(name: 'GENERATE_DTAF_SYS_CONF_XML_EGS', defaultValue: false, description: 'Enable this to generate DTAF system_configuration.xml for EGS'),
+        // booleanParam(name: 'GENERATE_DTAF_SYS_CONF_XML_GNR', defaultValue: false, description: 'Enable this to generate DTAF system_configuration.xml for GNR'),
+        // booleanParam(name: 'GENERATE_DTAF_SUT_INI_GNR', defaultValue: false, description: 'Enable this to generate sut.ini for GNR'),
+        // booleanParam(name: 'GENERATE_BIFROST_SYS_CONF_XML_PMSS', defaultValue: false, description: 'Enable this to generate Bifrost system_configuration.xml for PMSS'),
+        // booleanParam(name: 'GENERATE_BIFROST_SYS_CONF_XML_MSS', defaultValue: false, description: 'Enable this to generate Bifrost system_configuration.xml for MSS'),
+        // booleanParam(name: 'GENERATE_BIFROST_SYS_CONF_XML_RAS', defaultValue: false, description: 'Enable this to generate Bifrost system_configuration.xml for RAS'),
+        // booleanParam(name: 'GENERATE_MONTANA_CFG_MANAGEABILITY', defaultValue: false, description: 'Enable this to generate montana HOSTNAME.cfg file for MANAGEABILITY'),
+        // base64File(name:'GNR_SKU_FILE', description: 'Upload GNR SKU excel sheet in .zip format [file limit 100KB](only for sut.ini)'),
+        // string(name: 'SSD_NAME', defaultValue:'UEFI SAMSUNG MZWLR1T9HBJR-00007 S6EZNA0R900271 1', description: 'Enter the ssd name for SUT inventory'),
+        // // choice(choices: ['SPR','EMR','GNR'], name: 'CPU_FAMILY', description: 'Choose the CPU Family'),
+        // // choice(choices: ['EBG','EMT'], name: 'PCH_FAMILY', description: 'Choose the PCH Family'),
+
+        // //separator(name: "RASP", sectionHeader: "Fill below parameters to get the Hardware Details of SUT. Make sure that PythonSV is installed and ITP Cache Unlock is done.",
+		// //	separatorStyle: "border-width: 0",
+		// //	sectionHeaderStyle: """
+		// //		background-color: #7ea6d3;
+		// //		text-align: center;
+		// //		padding: 4px;
+		// //		color: #343434;
+		// //		font-size: 22px;
+		// //		font-weight: normal;
+		// //		text-transform: uppercase;
+		// //		font-family: 'Orienta', sans-serif;
+		// //		letter-spacing: 1px;
+		// //		font-style: italic;
+		// //	"""
+		// //),
+
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to configure the NUC to setup DTAF Framework",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // booleanParam(name: 'ENABLE_DTAF_NUC_SETUP', defaultValue: false, description: 'Enable this to download and install dtaf_nuc_setup'),
+        // booleanParam(name: 'ENABLE_NUC_INSTALLATIONS', defaultValue: false, description: 'Enable this to run dtaf_nuc_setup stage, For Bifrsot DTAF core/content setup is not done'),
+        // choice(choices: ['22.3.0.104','22.2.0.94','21.1.0.834','18.1.0.222'], name: 'QUARTUS_APPLICATION_VERSION', description: 'Choose the version for Quartus Application'),
+        // // choice(choices: ['2019.3.5'], name: 'PYCHARM_VERSION', description: 'Choose the Pycharm Version to be installed on the NUC'),
+        // string(name: 'CC_BUILD_VERSION', defaultValue:'DPG_Automation_release-v5.0.4.1_212023_1.0.23582_E', description: 'Enter CC Build Version to be used'),
+        // string(name: 'PACKAGE_KIT_NAMES', defaultValue:'BHS-GNR-AP-CENTOS-23.14.6.12,BHS-GNR-AP-ESXI-23.14.6.13', description: 'Enter package image kit names'),
+        // string(name: 'SDSI_API_KEY', defaultValue:'', description: 'Enter sdsi api key(for MANAGEABILITY)'),
+        // choice(choices: ['True','False'], name: 'enable_sut_checkup', description: 'Choose False if you want to disable SUT checkup'),
+
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to get SUT Provisioning",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', filterLength: 1, filterable: false, name: 'FIRMWARE_FLASHING', script: [$class: 'GroovyScript', script: [classpath: [], oldScript: '', sandbox: false, script: 'return["CPLD","IFWI","BMC"]']]],
+        // [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', filterLength: 1, filterable: false, name: 'SUT_OS', script: [$class: 'GroovyScript', script: [classpath: [], oldScript: '', sandbox: false, script: 'return["CentOS","Windows","ESXI","Rhel"]']]],
+        // string(name: 'SSD_NAME', defaultValue:'UEFI SAMSUNG MZWLR1T9HBJR-00007 S6EZNA0R900271 1', description: 'Enter the ssd name for SUT inventory'),
+        // string(name: 'PRODUCT_BUILD', defaultValue:'', description: 'Enter the Product Build'),
+
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to install Eowyn projects",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // booleanParam(name: 'ENABLE_EMON', defaultValue: false, description: 'Enable this to install Emon'),
+        // booleanParam(name: 'ENABLE_EOWYN', defaultValue: false, description: 'Enable this to install Eowyn'),
+
+       
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to configure the SUT post os installation",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // // booleanParam(name: 'ENABLE_BIFROST_SUT_SETUP', defaultValue: false, description: 'Enable this to run bifrost_sut_setup stage, Make sure SUT OS Provisioning(Centos Stream) is Complete'),
+        // booleanParam(name: 'BASIC_BRINGUP', defaultValue: false, description: 'Enable this to configure BASIC_BRINGUP on SUT(xmlcli)'),
+        // booleanParam(name: 'ToolKit', defaultValue: false, description: 'Enable this to configure ToolKit on SUT'),
+        // booleanParam(name: 'PMSS', defaultValue: false, description: 'Enable this to configure PMSS'),
+        // booleanParam(name: 'MSS', defaultValue: false, description: 'Enable this to configure MSS'),
+        // booleanParam(name: 'RAS', defaultValue: false, description: 'Enable this to configure RAS'),
+        // booleanParam(name: 'VIRTUALIZATION', defaultValue: false, description: 'Enable this to configure VIRTUALIZATION'),
+        // booleanParam(name: 'RDT', defaultValue: false, description: 'Enable this to configure RDT'),
+        // booleanParam(name: 'SECURITY', defaultValue: false, description: 'Enable this to configure SECURITY'),
+        // booleanParam(name: 'MANAGEABILITY', defaultValue: false, description: 'Enable this to configure MANAGEABILITY'),
+
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to configure the NUC to setup Bifrost Framework",
+		// 	separatorStyle: "border-width: 0",
+		// 	sectionHeaderStyle: """
+		// 		background-color: #7ea6d3;
+		// 		text-align: center;
+		// 		padding: 4px;
+		// 		color: #343434;
+		// 		font-size: 22px;
+		// 		font-weight: normal;
+		// 		text-transform: uppercase;
+		// 		font-family: 'Orienta', sans-serif;
+		// 		letter-spacing: 1px;
+		// 		font-style: italic;
+		// 	"""
+		// ),
+        // booleanParam(name: 'ENABLE_BIFROST_NUC_SETUP', defaultValue: false, description: 'Enable this to run bifrost_nuc_setup stage, only after running bifrost_sut_setup stage'),
+        // string(name: 'BIFROST_STABLE_VERSION', defaultValue: 'Bifrost_1.38.0', description: 'Enter the bifrost stable version'),
+	])
+])
+
+pipeline {
+    agent { label 'ansible-slave'
+    }
+
+    environment {
+        ansibleVaultKeyFile=credentials('ansibleVaultKeyFile')
+        GLOBAL_PATH_DEVOPSAPP="/home/jenkins/provisioning/DevopsApp"
+        GLOBAL_PATH_NUCPROVISIONING="/home/jenkins/provisioning/nuc_provisioning"
+        GLOBAL_PATH_SUTPROVISIONING="/home/jenkins/provisioning/sut_provisioning"
+        ANSIBLE_CONFIG="configuration/ansible.cfg"
+        PYCHARM_VERSION="2019.3.5"
+        ansible_tags = combine_tags(params)
+        biforst_ansible_tags = biforst_tags(params)
+        is_bifrost = false
+        sut_ini = " "
+        sut_file_name = "GRoot.yml"
+        OUT = "${SSD_NAME}".replaceAll( ' ', '_' )
+        GLOBAL_PATH_GIT_REPO="/C:/Users/Administrator/PNP"
+        
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr:'75', artifactNumToKeepStr: '35'))
+    }
+
+    stages {
+        stage('Running Python Script'){
+             steps {
+                 dir("${GLOBAL_PATH_GIT_REPO}"){
+                     script {
+                         withCredentials([file(credentialsId: 'ansibleVaultKeyFile', variable: 'ansibleVaultKeyFile')]){
+                             // sh 'sudo rm -rf ${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result'
+                             try {
+                               sh '''\
+                                #!/bin/bash
+                                export ANSIBLE_CONFIG="${GLOBAL_PATH_NUCPROVISIONING}/${ANSIBLE_CONFIG}"
+                                echo "${ANSIBLE_CONFIG}"
+                                ansible --version
+                                ANSIBLE_CONFIG="${ANSIBLE_CONFIG}" ANSIBLE_STDOUT_CALLBACK=junit JUNIT_OUTPUT_DIR="${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result" JUNIT_TASK_CLASS="yes" JUNIT_HIDE_TASK_ARGUMENTS=true ansible-playbook -i .inventory/nuc/${JOB_NAME}/${BUILD_ID}/nuc_provisioning.json upsert_system_configuration.yml -e @credential_vars.yml -e @.inventory/nuc/${JOB_NAME}/${BUILD_ID}/common_vars_all.bifrost.json -e REGION=${REGION} -e ssd_name=${OUT} --vault-password-file "${ansibleVaultKeyFile}" --tags "${ansible_tags}" -vv
+                                pwd
+                                '''
+                             } catch (Exception e) {
+                               throw e
+                             } 
+                         }
+                     }
+                 }
+             }
+        }
+        
+    }
+    // post {
+    //     always {
+
+    //         dir("${GLOBAL_PATH_NUCPROVISIONING}"){
+    //                 script {
+    //                     withCredentials([file(credentialsId: 'ansibleVaultKeyFile', variable: 'ansibleVaultKeyFile')]){
+    //                         // sh 'export ANSIBLE_CONFIG=./${ANSIBLE_CONFIG}'
+    //                         try {
+    //                           sh '''\
+    //                             #!/bin/bash
+    //                             export ANSIBLE_CONFIG="${ANSIBLE_CONFIG}"
+    //                             ANSIBLE_CONFIG="${ANSIBLE_CONFIG}" ANSIBLE_STDOUT_CALLBACK=junit JUNIT_OUTPUT_DIR="${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result" JUNIT_TASK_CLASS="yes" JUNIT_HIDE_TASK_ARGUMENTS=true ansible-playbook -i .inventory/nuc/${JOB_NAME}/${BUILD_ID}/nuc_provisioning.json upload_logs_host.yml -e @credential_vars.yml -e @.inventory/nuc/${JOB_NAME}/${BUILD_ID}/common_vars_all.bifrost.json -e log_path="${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result/" --vault-password-file "${ansibleVaultKeyFile}" -vv
+    //                             '''
+    //                         } catch (Exception e) {
+    //                           throw e
+    //                         }
+    //                     }
+    //                 }
+    //         }
+    //         sh 'cp -r ${GLOBAL_PATH_NUCPROVISIONING}/.inventory/nuc/${JOB_NAME}/${BUILD_ID}/system-configuration-junit-result/ ${WORKSPACE}/logs'
+    //         junit(allowEmptyResults: true, testResults: "logs/system-configuration-junit-result/*.xml")
+    //     }
+    // }
+}
