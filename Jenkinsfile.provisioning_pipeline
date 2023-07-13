@@ -71,8 +71,8 @@ properties([
 			"""
 		),
         choice(name: 'Git Org', choices: ['intel-innersource', 'intel-sandbox'],description: 'Choose the Github Organization'),
-        string(name: 'Git Repo', defaultValue:'', description: 'Enter Github Repository name'),
-        string(name: 'GitHub Url', defaultValue:'', description: 'Enter Github Url'),
+        string(name: 'Git Repo/URL', defaultValue:'', description: 'Enter Github Repository or Git Url'),
+        // string(name: 'GitHub Url', defaultValue:'', description: 'Enter Github Url'),
         
 
         separator(name: "RASP", sectionHeader: "Fill below parameters to upload Github Repo Zip to Artifactory",
@@ -109,11 +109,32 @@ properties([
 			"""
 		),
 
-        string(name: 'SYSTEM_IDs', defaultValue: '', description: 'Enter comma separated system IDs'),
+		choice(name: 'SYSTEM_TYPE', choices: ['One Cloud', 'BenchTop'], description: 'Choose the System Type'),
+
+        string(name: 'SYSTEM_ID', defaultValue: '', description: 'Enter your System ID'),
+
+		choice(name: 'SYSTEM', choices: ['NUC', 'SUT'], description: 'Choose system where cloning is needed to be done' type: 'PT_CHECKBOX'),
 
         extendedChoice(name: 'SYSTEM', description: 'Choose system where cloning is needed to be done', multiSelectDelimiter: ',',quoteValue: false, saveJSONParameterToFile: false, type: 'PT_CHECKBOX', value: 'NUC,SUT', visibleItemCount: 2),
 
-        // // string(name: 'PROXY', defaultValue: 'http://proxy-dmz.intel.com:912', description: 'Enter the PROXY URL you want to set'),
+		separator(name: "RASP", sectionHeader: "Fill below parameters if your system is BenchTop",
+			separatorStyle: "border-width: 0",
+			sectionHeaderStyle: """
+				background-color: #7ea6d3;
+				text-align: center;
+				padding: 4px;
+				color: #343434;
+				font-size: 22px;
+				font-weight: normal;
+				text-transform: uppercase;
+				font-family: 'Orienta', sans-serif;
+				letter-spacing: 1px;
+				font-style: italic;
+				"""
+		string(name: 'SYSTEM NUC', defaultValue: '', description: 'Enter your System NUC IP'),
+		string(name: 'SYSTEM_SUT', defaultValue: '', description: 'Enter your System SUT IP'),
+		// string(name: 'SYSTEM', defaultValue: '', description: 'Enter your System ID'),
+		// string(name: 'SYSTEM', defaultValue: '', description: 'Enter your System ID'),
 
         // // choice(name: 'NUC_OS_TYPE', choices: ['windows'], description: 'Choose the NUC OS type'),
         // // choice(name: 'SUT_OS_TYPE', choices: ['linux','windows','esxi'], description: 'Choose the SUT OS type'),
@@ -137,7 +158,7 @@ properties([
         // booleanParam(name: 'ENABLE_PYTHONSV', defaultValue: false, description: 'Enable this to install pythonsv projects(common,install,components,misc,emmitsburg default installations)'),
         // [$class: 'ChoiceParameter', choiceType: 'PT_CHECKBOX', filterLength: 1, filterable: false, name: 'pythonsv', script: [$class: 'GroovyScript', script: [classpath: [], oldScript: '', sandbox: false, script: 'return["crowvalley","graniterapids","emeraldrapids","sapphirerapids","bigcore","sierraforest"]']]],
         
-        // separator(name: "RASP", sectionHeader: "Fill below parameters to generate system configuration file(s)",
+        // separator(name: "RASP", sectionHeader: "Fill below parameters to generate system configuration file(s)",cco
 		// 	separatorStyle: "border-width: 0",
 		// 	sectionHeaderStyle: """
 		// 		background-color: #7ea6d3;
