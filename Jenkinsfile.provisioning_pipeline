@@ -113,7 +113,7 @@ properties([
 
         string(name: 'SYSTEM_ID', defaultValue: '', description: 'Enter your System ID'),
 
-		choice(name: 'SYSTEM', choices: ['NUC', 'SUT'], description: 'Choose system where cloning is needed to be done' type: 'PT_CHECKBOX'),
+		// choice(name: 'SYSTEM', choices: ['NUC', 'SUT'], description: 'Choose system where cloning is needed to be done' type: 'PT_CHECKBOX'),
 
         extendedChoice(name: 'SYSTEM', description: 'Choose system where cloning is needed to be done', multiSelectDelimiter: ',',quoteValue: false, saveJSONParameterToFile: false, type: 'PT_CHECKBOX', value: 'NUC,SUT', visibleItemCount: 2),
 
