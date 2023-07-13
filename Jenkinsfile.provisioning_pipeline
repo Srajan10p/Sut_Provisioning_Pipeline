@@ -132,7 +132,7 @@ properties([
 				font-style: italic;
 				"""
 		string(name: 'SYSTEM NUC', defaultValue: '', description: 'Enter your System NUC IP'),
-		string(name: 'SYSTEM_SUT', defaultValue: '', description: 'Enter your System SUT IP'),
+		string(name: 'SYSTEM_SUT', defaultValue: '', description: 'Enter your System SUT IP')
 		// string(name: 'SYSTEM', defaultValue: '', description: 'Enter your System ID'),
 		// string(name: 'SYSTEM', defaultValue: '', description: 'Enter your System ID'),
 
